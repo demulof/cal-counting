@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="飲食紀錄">
+<meta name="theme-color" content="#F6F7F5">
+<title>飲食紀錄</title>
+<style>
+  :root{
+    --bg:#F6F7F5;--card:#FFFFFF;--ink:#1E2A24;--muted:#6E7A73;--line:#E4E8E4;
+    --kcal:#D98324;--kcal-soft:#FBEFE0;--pro:#2E7D5B;--pro-soft:#E3F0E9;--over:#C0452E;--radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg)}
+  body{color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+  .wrap{max-width:560px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom))}
+
+  .topbar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:4px}
+  .syncbtn{background:none;border:none;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px}
+  .syncdot{width:8px;height:8px;border-radius:50%;background:#C7CDC9}
+  .syncdot.on{background:var(--pro)}
+  .syncdot.err{background:var(--over)}
+
+  .datebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .datebar button{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:18px;color:var(--ink);cursor:pointer}
+  .datebar .dlabel{text-align:center}
+  .datebar .dlabel .big{font-weight:700;font-size:17px}
+  .datebar .dlabel .sub{font-size:12px;color:var(--muted)}
+
+  .totals{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;margin-bottom:14px}
+  .trow{margin-bottom:12px}.trow:last-child{margin-bottom:0}
+  .thead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .tname{font-size:13px;color:var(--muted);letter-spacing:.05em}
+  .tnum{font-variant-numeric:tabular-nums;font-weight:800;font-size:26px}
+  .tnum .unit{font-size:13px;font-weight:500;color:var(--muted);margin-left:2px}
+  .tnum .target{font-size:13px;font-weight:500;color:var(--muted)}
+  .bar{height:8px;border-radius:99px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:99px;transition:width .3s ease}
+  .bar.kcal{background:var(--kcal-soft)}.bar.kcal .fill{background:var(--kcal)}
+  .bar.pro{background:var(--pro-soft)}.bar.pro .fill{background:var(--pro)}
+  .bar .fill.over{background:var(--over)}
+  .tsettings{font-size:12px;color:var(--muted);text-align:right;margin-top:8px}
+  .tsettings a{color:var(--pro);text-decoration:none;cursor:pointer}
+
+  .sechead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
+  .sechead h2{font-size:14px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .sechead .acts{display:flex;gap:12px}
+  .sechead .mng{font-size:12px;color:var(--pro);cursor:pointer;background:none;border:none;font-family:inherit}
+  .sechead .mng.on{color:var(--over)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{position:relative;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:14px;color:var(--ink);display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.25}
+  .chip:active{transform:scale(.97)}
+  .chip .meta{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .chip.setchip{border-color:var(--pro);background:var(--pro-soft)}
+  .chip.addnew{border-style:dashed;color:var(--muted);flex-direction:row;align-items:center}
+  .chip.pending{border-color:var(--over);background:#FBE9E5}
+  .chip .del{position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;border-radius:99px;background:var(--over);color:#fff;border:none;font-size:11px;line-height:1;cursor:pointer;display:none;padding:0 6px;font-family:inherit}
+  .managing .chip .del{display:block}
+  .managing .chip{border-style:dashed}
+
+  .cattabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .cattab{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 13px;font-size:13px;font-family:inherit;color:var(--muted);cursor:pointer}
+  .cattab.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+
+  .log{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .entry{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .entry:last-child{border-bottom:none}
+  .entry .info{flex:1;min-width:0}
+  .entry .ename{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .entry .emeta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .qty{display:flex;align-items:center;gap:6px}
+  .qty button{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:14px;color:var(--ink)}
+  .qty span{min-width:20px;text-align:center;font-variant-numeric:tabular-nums;font-size:14px}
+  .empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:13px}
+
+  .manualbtn{width:100%;margin-top:10px;padding:11px;border:1px dashed var(--line);border-radius:var(--radius);background:none;color:var(--muted);font-family:inherit;font-size:14px;cursor:pointer}
+
+  .overlay{position:fixed;inset:0;background:rgba(20,30,25,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:86vh;overflow-y:auto}
+  .sheet h3{font-size:16px;margin-bottom:14px}
+  .sheet .hint{font-size:12px;color:var(--muted);margin:-6px 0 12px;line-height:1.5}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit;background:var(--bg);color:var(--ink)}
+  .field input:focus{outline:2px solid var(--pro);border-color:transparent}
+  .row2{display:flex;gap:10px}.row2 .field{flex:1}
+  .check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:12px}
+  .check input{width:16px;height:16px;accent-color:var(--pro)}
+  .btnrow{display:flex;gap:10px;margin-top:6px}
+  .btn{flex:1;padding:12px;border-radius:12px;font-size:15px;font-family:inherit;cursor:pointer;border:none}
+  .btn.primary{background:var(--pro);color:#fff;font-weight:600}
+  .btn.ghost{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+  .btn.danger{background:#FBE9E5;color:var(--over)}
+  .catopt{padding:6px 12px;font-size:13px;flex-direction:row}
+  .catopt.selcat{border-color:var(--pro);background:var(--pro-soft);color:var(--pro);font-weight:600}
+  .pickitem{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+  .pickitem:last-child{border-bottom:none}
+  .pickitem .info{flex:1}.pickitem .info .n{font-size:14px}
+  .pickitem .info .m{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .picklist{margin-bottom:12px;max-height:40vh;overflow-y:auto}
+
+  .catrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .catrow input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--ink)}
+  .catrow input:disabled{color:var(--muted);background:#F0F1EF}
+  .catrow .cdel{border:none;background:#FBE9E5;color:var(--over);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .catrow .cdel:disabled{opacity:.4;cursor:default}
+  .codebox{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;word-break:break-all;color:var(--ink)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 18px;border-radius:99px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60;white-space:nowrap;max-width:90vw;text-align:center}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <button class="syncbtn" id="syncBtn"><span class="syncdot" id="syncDot"></span><span id="syncLabel">同步:未設定</span></button>
+  </div>
+
+  <div class="datebar">
+    <button id="prevDay" aria-label="前一天">‹</button>
+    <div class="dlabel"><div class="big" id="dateBig">今天</div><div class="sub" id="dateSub"></div></div>
+    <button id="nextDay" aria-label="後一天">›</button>
+  </div>
+
+  <div class="totals">
+    <div class="trow">
+      <div class="thead"><span class="tname">熱量</span>
+        <span class="tnum"><span id="kcalNow">0</span><span class="unit">kcal</span> <span class="target">/ <span id="kcalTarget"></span></span></span></div>
+      <div class="bar kcal"><div class="fill" id="kcalBar" style="width:0%"></div></div>
+    </div>
+    <div class="trow">
+      <div class="thead"><span class="tname">蛋白質</span>
+        <span class="tnum"><span id="proNow">0</span><span class="unit">g</span> <span class="target">/ <span id="proTarget"></span></span></span></div>
+      <div class="bar pro"><div class="fill" id="proBar" style="width:0%"></div></div>
+    </div>
+    <div class="tsettings"><a id="editTargets">調整目標</a></div>
+  </div>
+
+  <div class="sechead"><h2>本日紀錄</h2></div>
+  <div class="log" id="logList"></div>
+  <button class="manualbtn" id="manualBtn">＋ 手動輸入一筆(未存入食物庫)</button>
+
+  <div class="sechead"><h2>組合餐點</h2>
+    <div class="acts"><button class="mng" id="mngSets">管理</button></div></div>
+  <div class="chips" id="setChips"></div>
+
+  <div class="sechead"><h2>單一食物</h2>
+    <div class="acts"><button class="mng" id="editCats">分類</button><button class="mng" id="mngFoods">管理</button></div></div>
+  <div class="cattabs" id="catTabs"></div>
+  <div class="chips" id="foodChips"></div>
+
+</div>
+
+<!-- 新增/編輯食物 -->
+<div class="overlay" id="foodModal"><div class="sheet">
+  <h3 id="foodModalTitle">新增食物</h3>
+  <div class="field"><label>名稱</label><input id="fName" placeholder="例:雞胸健康餐"></div>
+  <div class="row2">
+    <div class="field"><label>熱量 (kcal)</label><input id="fKcal" type="number" inputmode="decimal" placeholder="514"></div>
+    <div class="field"><label>蛋白質 (g)</label><input id="fPro" type="number" inputmode="decimal" placeholder="37.8"></div>
+  </div>
+  <div class="field"><label>分類(必選)</label><div class="chips" id="fCatChips"></div></div>
+  <div class="btnrow"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="fSave">儲存</button></div>
+</div></div>
+
+<!-- 管理分類 -->
+<div class="overlay" id="catModal"><div class="sheet">
+  <h3>管理分類</h3>
+  <p class="hint">改名會同步更新該分類下所有食物。刪除分類時,原本屬於它的食物會自動移到「其他」。「其他」為保留分類,不可刪除或改名。</p>
+  <div id="catList"></div>
+  <div class="field" style="margin-top:14px"><label>新增分類</label>
+    <div style="display:flex;gap:8px"><input id="newCatName" placeholder="例:水果類" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;font-family:inherit;background:var(--bg)">
+    <button class="btn primary" id="addCatBtn" style="flex:0 0 auto;padding:10px 18px">新增</button></div>
+  </div>
+  <div class="btnrow"><button class="btn ghost" data-close>完成</button></div>
+</div></div>
+
+<!-- 新增組合 -->
+<div class="overlay" id="setModal"><div class="sheet">
+  <h3>新增組合餐點</h3>
+  <div class="field"><label>組合名稱</label><input id="sName" placeholder="例:固定早餐"></div>
+  <div class="field"><label>勾選食物並設定數量</label></div>
+  <div class="picklist" id="setPickList"></div>
+  <div class="btnrow"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="sSave">儲存組合</button></div>
+</div></div>
+
+<!-- 手動輸入 -->
+<div class="overlay" id="manualModal"><div class="sheet">
+  <h3>手動輸入一筆</h3>
+  <div class="field"><label>名稱(可省略)</label><input id="mName" placeholder="例:同事請的雞排"></div>
+  <div class="row2">
+    <div class="field"><label>熱量 (kcal)</label><input id="mKcal" type="number" inputmode="decimal"></div>
+    <div class="field"><label>蛋白質 (g)</label><input id="mPro" type="number" inputmode="decimal"></div>
+  </div>
+  <div class="check"><input type="checkbox" id="mSaveLib"><label for="mSaveLib" style="margin:0;font-size:13px">同時存入食物庫,之後可一鍵套用</label></div>
+  <div class="field" id="mCatWrap" style="display:none"><label>分類</label><div class="chips" id="mCatChips"></div></div>
+  <div class="btnrow"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="mSave">加入本日</button></div>
+</div></div>
+
+<!-- 目標 -->
+<div class="overlay" id="targetModal"><div class="sheet">
+  <h3>每日目標</h3>
+  <div class="row2">
+    <div class="field"><label>熱量 (kcal)</label><input id="tKcal" type="number" inputmode="numeric"></div>
+    <div class="field"><label>蛋白質 (g)</label><input id="tPro" type="number" inputmode="numeric"></div>
+  </div>
+  <div class="btnrow"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="tSave">儲存</button></div>
+</div></div>
+
+<!-- 同步設定 -->
+<div class="overlay" id="syncModal"><div class="sheet">
+  <h3>跨裝置同步</h3>
+  <p class="hint">貼上你的 Firebase 即時資料庫網址,並在兩台裝置使用<b>同一組同步碼</b>,資料就會互通。第一次設定請看下方說明。</p>
+  <div class="field"><label>資料庫網址</label><input id="syncUrl" placeholder="https://xxxx-default-rtdb.firebaseio.com"></div>
+  <div class="field"><label>同步碼(兩台裝置需相同)</label><input id="syncCode" placeholder="按下方產生,或貼上另一台的同步碼"></div>
+  <div class="btnrow" style="margin-bottom:10px"><button class="btn ghost" id="genCode">產生新同步碼</button></div>
+  <div class="btnrow"><button class="btn ghost" data-close>取消</button><button class="btn primary" id="syncEnable">啟用同步</button></div>
+  <div id="syncExtra" style="display:none;margin-top:14px">
+    <div class="btnrow"><button class="btn ghost" id="pullNow">下載雲端覆蓋本機</button><button class="btn ghost" id="pushNow">上傳本機覆蓋雲端</button></div>
+    <div class="btnrow"><button class="btn danger" id="syncOff">停用同步</button></div>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== 本機儲存 ========== */
+const mem={};
+const LS={
+  get(k,f){ try{const v=localStorage.getItem(k);return v==null?f:JSON.parse(v);}catch(e){return (k in mem)?mem[k]:f;} },
+  set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){mem[k]=v;} }
+};
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+/* ========== 預設 ========== */
+const DEFAULT_STATE={
+  cats:['便當類','原食物類','飲品類','其他'],
+  foods:[
+    {id:'egg',name:'雞蛋(1顆)',kcal:72,protein:6.3,cat:'原食物類'},
+    {id:'soy',name:'無糖豆漿(1杯)',kcal:110,protein:9,cat:'飲品類'},
+    {id:'potato',name:'馬鈴薯(100g)',kcal:77,protein:2,cat:'原食物類'},
+    {id:'cbr',name:'雞胸健康餐',kcal:514,protein:37.8,cat:'便當類'},
+    {id:'legr',name:'雞腿肉飯(去皮)',kcal:800,protein:42.5,cat:'便當類'},
+    {id:'legb',name:'滷雞腿便當(去皮)',kcal:900,protein:40,cat:'便當類'},
+    {id:'whey',name:'乳清(1杯)',kcal:109.7,protein:21,cat:'飲品類'},
+  ],
+  sets:[{id:'bkf',name:'固定早餐',items:[{foodId:'egg',qty:2},{foodId:'soy',qty:1},{foodId:'potato',qty:1}]}],
+  targets:{kcal:1800,protein:140},
+  logs:{},
+  updatedAt:0
+};
+
+/* ========== 狀態 ========== */
+let state;
+let curDate=new Date();
+let managingFoods=false, managingSets=false;
+let pendingDelete=null, pendingDeleteTimer=null;
+let activeFilter='全部';
+let editingFoodId=null;
+let sync=LS.get('dt_sync',{url:'',code:'',on:false});
+
+const dkey=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;};
+const fmt=n=>{const r=Math.round(n*10)/10;return Number.isInteger(r)?String(r):r.toFixed(1);};
+const OTHER='其他';
+
+function ensureShape(s){
+  if(!s.cats||!s.cats.length) s.cats=DEFAULT_STATE.cats.slice();
+  if(!s.cats.includes(OTHER)) s.cats.push(OTHER);
+  if(!s.foods) s.foods=[];
+  if(!s.sets) s.sets=[];
+  if(!s.targets) s.targets={...DEFAULT_STATE.targets};
+  if(!s.logs) s.logs={};
+  s.foods.forEach(f=>{ if(!f.cat||!s.cats.includes(f.cat)) f.cat=OTHER; });
+  if(typeof s.updatedAt!=='number') s.updatedAt=0;
+  return s;
+}
+function todayEntries(){ return state.logs[dkey(curDate)] || (state.logs[dkey(curDate)]=[]); }
+
+/* ========== 儲存 + 觸發同步 ========== */
+let pushTimer=null;
+function save(touch=true){
+  if(touch) state.updatedAt=Date.now();
+  LS.set('dt_state', state);
+  if(sync.on){ clearTimeout(pushTimer); pushTimer=setTimeout(pushCloud, 900); }
+}
+
+/* ========== Firebase 同步 ========== */
+function bucketUrl(){
+  let u=(sync.url||'').trim().replace(/\/+$/,'');
+  if(!u) return null;
+  return `${u}/buckets/${encodeURIComponent(sync.code)}.json`;
+}
+function setSyncUI(){
+  const dot=document.getElementById('syncDot'), lab=document.getElementById('syncLabel');
+  dot.className='syncdot'+(sync.on?' on':'');
+  lab.textContent = sync.on ? '同步:已開啟' : '同步:未設定';
+}
+async function pushCloud(){
+  const url=bucketUrl(); if(!url) return;
+  try{
+    const r=await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+    if(!r.ok) throw new Error(r.status);
+    document.getElementById('syncDot').className='syncdot on';
+  }catch(e){
+    document.getElementById('syncDot').className='syncdot err';
+  }
+}
+async function pullCloud(applyIfNewer=true){
+  const url=bucketUrl(); if(!url) return null;
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    const remote=await r.json();
+    document.getElementById('syncDot').className='syncdot on';
+    if(remote && typeof remote==='object'){
+      if(!applyIfNewer || (remote.updatedAt||0) > (state.updatedAt||0)){
+        state=ensureShape(remote);
+        LS.set('dt_state',state);
+        renderAll();
+      }
+    }
+    return remote;
+  }catch(e){
+    document.getElementById('syncDot').className='syncdot err';
+    return null;
+  }
+}
+
+/* ========== 初始化 ========== */
+function init(){
+  state=ensureShape(LS.get('dt_state', JSON.parse(JSON.stringify(DEFAULT_STATE))));
+  save(false);
+  activeFilter=LS.get('dt_filter','全部');
+  setSyncUI();
+  renderAll();
+  if(sync.on){
+    pullCloud(true);
+    setInterval(()=>{ if(!document.hidden && sync.on) pullCloud(true); }, 20000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden && sync.on) pullCloud(true); });
+  }
+}
+
+/* ========== 渲染 ========== */
+function renderAll(){ renderDate();renderTotals();renderLog();renderSets();renderFoods(); }
+
+function renderDate(){
+  const today=dkey(new Date()), k=dkey(curDate);
+  const yest=new Date();yest.setDate(yest.getDate()-1);
+  document.getElementById('dateBig').textContent = k===today?'今天':(k===dkey(yest)?'昨天':k);
+  const wd=['日','一','二','三','四','五','六'];
+  document.getElementById('dateSub').textContent=`${k} (週${wd[curDate.getDay()]})`;
+  document.getElementById('nextDay').style.visibility=(k===today)?'hidden':'visible';
+}
+function renderTotals(){
+  let k=0,p=0; todayEntries().forEach(e=>{k+=e.kcal*e.qty;p+=e.protein*e.qty;});
+  document.getElementById('kcalNow').textContent=fmt(k);
+  document.getElementById('proNow').textContent=fmt(p);
+  document.getElementById('kcalTarget').textContent=state.targets.kcal;
+  document.getElementById('proTarget').textContent=state.targets.protein;
+  const kb=document.getElementById('kcalBar'),pb=document.getElementById('proBar');
+  kb.style.width=Math.min(100,k/state.targets.kcal*100)+'%';
+  pb.style.width=Math.min(100,p/state.targets.protein*100)+'%';
+  kb.classList.toggle('over',k>state.targets.kcal);
+}
+function renderLog(){
+  const list=document.getElementById('logList'); list.innerHTML='';
+  const entries=todayEntries();
+  if(entries.length===0){ list.innerHTML='<div class="empty">今天還沒有紀錄,點下方的食物或組合即可加入</div>'; return; }
+  entries.forEach(e=>{
+    const row=document.createElement('div'); row.className='entry';
+    row.innerHTML=`<div class="info"><div class="ename">${esc(e.name)}</div>
+      <div class="emeta">${fmt(e.kcal*e.qty)} kcal・蛋白質 ${fmt(e.protein*e.qty)}g${e.qty>1?`(${fmt(e.kcal)}×${e.qty})`:''}</div></div>
+      <div class="qty"><button data-a="minus">−</button><span>${e.qty}</span><button data-a="plus">＋</button></div>`;
+    row.querySelector('[data-a="plus"]').onclick=()=>changeQty(e.id,1);
+    row.querySelector('[data-a="minus"]').onclick=()=>changeQty(e.id,-1);
+    list.appendChild(row);
+  });
+}
+function setTotals(s){let k=0,p=0;s.items.forEach(it=>{const f=state.foods.find(f=>f.id===it.foodId);if(f){k+=f.kcal*it.qty;p+=f.protein*it.qty;}});return{k,p};}
+
+function makeDelBtn(type,id,name,chipEl){
+  const del=document.createElement('button'); del.className='del';
+  const isP=pendingDelete&&pendingDelete.type===type&&pendingDelete.id===id;
+  del.textContent=isP?'確認刪除':'✕'; if(isP)chipEl.classList.add('pending');
+  del.onclick=ev=>{ev.stopPropagation();
+    if(pendingDelete&&pendingDelete.type===type&&pendingDelete.id===id){clearPending();type==='food'?deleteFood(id):deleteSet(id);}
+    else{clearPending();pendingDelete={type,id};pendingDeleteTimer=setTimeout(()=>{clearPending();renderSets();renderFoods();},3000);renderSets();renderFoods();}
+  };
+  return del;
+}
+function clearPending(){pendingDelete=null;clearTimeout(pendingDeleteTimer);}
+
+function renderSets(){
+  const sc=document.getElementById('setChips'); sc.classList.toggle('managing',managingSets); sc.innerHTML='';
+  state.sets.forEach(s=>{
+    const {k,p}=setTotals(s);
+    const b=document.createElement('button'); b.className='chip setchip';
+    b.innerHTML=`<span>${esc(s.name)}</span><span class="meta">${fmt(k)} kcal・${fmt(p)}g</span>`;
+    b.onclick=()=>managingSets?null:addSet(s);
+    b.appendChild(makeDelBtn('set',s.id,s.name,b)); sc.appendChild(b);
+  });
+  const add=document.createElement('button'); add.className='chip addnew'; add.textContent='＋ 新增組合'; add.onclick=openSetModal; sc.appendChild(add);
+}
+function renderFoods(){
+  const nonEmpty=state.cats.filter(c=>state.foods.some(f=>f.cat===c));
+  const tabsList=['全部',...nonEmpty];
+  if(!tabsList.includes(activeFilter)) activeFilter='全部';
+  const tabs=document.getElementById('catTabs'); tabs.innerHTML='';
+  tabsList.forEach(c=>{
+    const t=document.createElement('button'); t.className='cattab'+(c===activeFilter?' on':''); t.textContent=c;
+    t.onclick=()=>{activeFilter=c;LS.set('dt_filter',c);renderFoods();}; tabs.appendChild(t);
+  });
+  const fc=document.getElementById('foodChips'); fc.classList.toggle('managing',managingFoods); fc.innerHTML='';
+  const shown=activeFilter==='全部'?state.foods:state.foods.filter(f=>f.cat===activeFilter);
+  shown.forEach(f=>{
+    const b=document.createElement('button'); b.className='chip';
+    b.innerHTML=`<span>${esc(f.name)}</span><span class="meta">${fmt(f.kcal)} kcal・${fmt(f.protein)}g</span>`;
+    b.onclick=()=>managingFoods?openFoodModal(f):addFoodEntry(f);
+    b.appendChild(makeDelBtn('food',f.id,f.name,b)); fc.appendChild(b);
+  });
+  const add=document.createElement('button'); add.className='chip addnew'; add.textContent='＋ 新增食物'; add.onclick=()=>openFoodModal(null); fc.appendChild(add);
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+/* ========== 操作 ========== */
+function addFoodEntry(f){
+  const e=todayEntries(); const ex=e.find(x=>x.foodId===f.id);
+  if(ex)ex.qty++; else e.push({id:uid(),foodId:f.id,name:f.name,kcal:f.kcal,protein:f.protein,qty:1});
+  save(); renderTotals(); renderLog(); toast(`已加入 ${f.name}`);
+}
+function addSet(s){
+  const e=todayEntries();
+  s.items.forEach(it=>{const f=state.foods.find(f=>f.id===it.foodId);if(!f)return;const ex=e.find(x=>x.foodId===f.id);if(ex)ex.qty+=it.qty;else e.push({id:uid(),foodId:f.id,name:f.name,kcal:f.kcal,protein:f.protein,qty:it.qty});});
+  save(); renderTotals(); renderLog(); toast(`已套入「${s.name}」`);
+}
+function changeQty(id,d){
+  let e=todayEntries(); const it=e.find(x=>x.id===id); if(!it)return;
+  it.qty+=d; if(it.qty<=0) state.logs[dkey(curDate)]=e.filter(x=>x.id!==id);
+  save(); renderTotals(); renderLog();
+}
+function deleteFood(id){
+  const f=state.foods.find(f=>f.id===id);
+  state.foods=state.foods.filter(f=>f.id!==id);
+  state.sets=state.sets.map(s=>({...s,items:s.items.filter(it=>it.foodId!==id)})).filter(s=>s.items.length>0);
+  save(); renderSets(); renderFoods(); toast(`已刪除「${f?f.name:''}」`);
+}
+function deleteSet(id){
+  const s=state.sets.find(s=>s.id===id);
+  state.sets=state.sets.filter(x=>x.id!==id);
+  save(); renderSets(); toast(`已刪除組合「${s?s.name:''}」`);
+}
+
+/* ========== Modal 基礎 ========== */
+function show(id){document.getElementById(id).classList.add('show');}
+function hide(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');});
+  o.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>o.classList.remove('show'));
+});
+
+/* ========== 新增/編輯食物 ========== */
+let selectedCat=null;
+function renderCatOptions(box, sel){
+  box.innerHTML='';
+  state.cats.forEach(c=>{
+    const b=document.createElement('button'); b.type='button';
+    b.className='chip catopt'+(c===sel?' selcat':''); b.textContent=c;
+    b.onclick=()=>{selectedCat=c;box.querySelectorAll('.catopt').forEach(x=>x.classList.remove('selcat'));b.classList.add('selcat');};
+    box.appendChild(b);
+  });
+}
+function openFoodModal(food){
+  editingFoodId = food?food.id:null;
+  document.getElementById('foodModalTitle').textContent = food?'編輯食物':'新增食物';
+  document.getElementById('fName').value = food?food.name:'';
+  document.getElementById('fKcal').value = food?food.kcal:'';
+  document.getElementById('fPro').value  = food?food.protein:'';
+  selectedCat = food ? food.cat : ((activeFilter!=='全部'&&state.cats.includes(activeFilter))?activeFilter:state.cats[0]);
+  renderCatOptions(document.getElementById('fCatChips'), selectedCat);
+  show('foodModal');
+}
+document.getElementById('fSave').onclick=()=>{
+  const name=document.getElementById('fName').value.trim();
+  const kcal=parseFloat(document.getElementById('fKcal').value);
+  const pro=parseFloat(document.getElementById('fPro').value);
+  if(!name||isNaN(kcal)||isNaN(pro)){toast('請填完整名稱、熱量、蛋白質');return;}
+  if(!selectedCat){toast('請選擇分類');return;}
+  if(editingFoodId){
+    const f=state.foods.find(f=>f.id===editingFoodId);
+    if(f){f.name=name;f.kcal=kcal;f.protein=pro;f.cat=selectedCat;}
+  }else{
+    state.foods.push({id:uid(),name,kcal,protein:pro,cat:selectedCat});
+  }
+  ['fName','fKcal','fPro'].forEach(i=>document.getElementById(i).value='');
+  save(); hide('foodModal');
+  activeFilter=selectedCat; LS.set('dt_filter',activeFilter);
+  managingFoods=false; document.getElementById('mngFoods').textContent='管理'; document.getElementById('mngFoods').classList.remove('on');
+  renderSets(); renderFoods(); toast(editingFoodId?'已更新':'已存入食物庫');
+};
+
+/* ========== 管理分類 ========== */
+let catPending=null, catPendingTimer=null;
+function renderCatList(){
+  const list=document.getElementById('catList'); list.innerHTML='';
+  state.cats.forEach((c,idx)=>{
+    const row=document.createElement('div'); row.className='catrow';
+    const inp=document.createElement('input'); inp.value=c; inp.disabled=(c===OTHER);
+    inp.onchange=()=>renameCat(c, inp.value.trim(), inp);
+    const del=document.createElement('button'); del.className='cdel';
+    if(c===OTHER){ del.textContent='保留'; del.disabled=true; }
+    else{
+      const isP=catPending===c; del.textContent=isP?'確認刪除':'刪除';
+      del.onclick=()=>{
+        if(catPending===c){clearCatPending();deleteCat(c);}
+        else{clearCatPending();catPending=c;catPendingTimer=setTimeout(()=>{clearCatPending();renderCatList();},3000);renderCatList();}
+      };
+    }
+    row.appendChild(inp); row.appendChild(del); list.appendChild(row);
+  });
+}
+function clearCatPending(){catPending=null;clearTimeout(catPendingTimer);}
+function renameCat(oldName,newName,inp){
+  newName=(newName||'').trim();
+  if(!newName||newName===oldName){inp.value=oldName;return;}
+  if(state.cats.includes(newName)){toast('已有同名分類');inp.value=oldName;return;}
+  const i=state.cats.indexOf(oldName); if(i<0)return;
+  state.cats[i]=newName;
+  state.foods.forEach(f=>{if(f.cat===oldName)f.cat=newName;});
+  if(activeFilter===oldName){activeFilter=newName;LS.set('dt_filter',activeFilter);}
+  save(); renderCatList(); renderFoods(); toast('分類已改名');
+}
+function deleteCat(name){
+  if(name===OTHER)return;
+  state.cats=state.cats.filter(c=>c!==name);
+  let moved=0; state.foods.forEach(f=>{if(f.cat===name){f.cat=OTHER;moved++;}});
+  if(activeFilter===name){activeFilter='全部';LS.set('dt_filter',activeFilter);}
+  save(); renderCatList(); renderFoods(); toast(moved?`已刪除,${moved} 項食物移到「其他」`:'分類已刪除');
+}
+document.getElementById('addCatBtn').onclick=()=>{
+  const inp=document.getElementById('newCatName'); const n=inp.value.trim();
+  if(!n){toast('請輸入分類名稱');return;}
+  if(state.cats.includes(n)){toast('已有同名分類');return;}
+  const oi=state.cats.indexOf(OTHER);
+  if(oi>=0) state.cats.splice(oi,0,n); else state.cats.push(n); // 其他永遠置底
+  inp.value=''; save(); renderCatList(); renderFoods(); toast('已新增分類');
+};
+document.getElementById('editCats').onclick=()=>{clearCatPending();renderCatList();show('catModal');};
+
+/* ========== 新增組合 ========== */
+let setPick={};
+function openSetModal(){
+  setPick={}; const list=document.getElementById('setPickList'); list.innerHTML='';
+  state.foods.forEach(f=>{
+    const row=document.createElement('div'); row.className='pickitem';
+    row.innerHTML=`<div class="info"><div class="n">${esc(f.name)}</div><div class="m">${fmt(f.kcal)} kcal・${fmt(f.protein)}g</div></div>
+      <div class="qty"><button data-a="minus">−</button><span data-q>0</span><button data-a="plus">＋</button></div>`;
+    const q=row.querySelector('[data-q]');
+    row.querySelector('[data-a="plus"]').onclick=()=>{setPick[f.id]=(setPick[f.id]||0)+1;q.textContent=setPick[f.id];};
+    row.querySelector('[data-a="minus"]').onclick=()=>{if(!setPick[f.id])return;setPick[f.id]--;if(!setPick[f.id])delete setPick[f.id];q.textContent=setPick[f.id]||0;};
+    list.appendChild(row);
+  });
+  document.getElementById('sName').value=''; show('setModal');
+}
+document.getElementById('sSave').onclick=()=>{
+  const name=document.getElementById('sName').value.trim();
+  const items=Object.entries(setPick).map(([foodId,qty])=>({foodId,qty}));
+  if(!name){toast('請輸入組合名稱');return;}
+  if(items.length===0){toast('請至少選一項食物');return;}
+  state.sets.push({id:uid(),name,items}); save(); hide('setModal'); renderSets(); toast('組合已建立');
+};
+
+/* ========== 手動輸入 ========== */
+let mSelectedCat=OTHER;
+document.getElementById('manualBtn').onclick=()=>{
+  ['mName','mKcal','mPro'].forEach(i=>document.getElementById(i).value='');
+  const chk=document.getElementById('mSaveLib'); chk.checked=false;
+  document.getElementById('mCatWrap').style.display='none';
+  show('manualModal');
+};
+document.getElementById('mSaveLib').onchange=function(){
+  const wrap=document.getElementById('mCatWrap');
+  if(this.checked){ mSelectedCat=OTHER; renderMCat(); wrap.style.display='block'; }
+  else wrap.style.display='none';
+};
+function renderMCat(){
+  const box=document.getElementById('mCatChips'); box.innerHTML='';
+  state.cats.forEach(c=>{
+    const b=document.createElement('button'); b.type='button';
+    b.className='chip catopt'+(c===mSelectedCat?' selcat':''); b.textContent=c;
+    b.onclick=()=>{mSelectedCat=c;box.querySelectorAll('.catopt').forEach(x=>x.classList.remove('selcat'));b.classList.add('selcat');};
+    box.appendChild(b);
+  });
+}
+document.getElementById('mSave').onclick=()=>{
+  const name=document.getElementById('mName').value.trim()||'手動輸入';
+  const kcal=parseFloat(document.getElementById('mKcal').value);
+  const pro=parseFloat(document.getElementById('mPro').value);
+  if(isNaN(kcal)||isNaN(pro)){toast('請填熱量與蛋白質');return;}
+  let foodId=null;
+  if(document.getElementById('mSaveLib').checked){
+    foodId=uid(); state.foods.push({id:foodId,name,kcal,protein:pro,cat:mSelectedCat}); renderFoods();
+  }
+  todayEntries().push({id:uid(),foodId,name,kcal,protein:pro,qty:1});
+  save(); hide('manualModal'); renderTotals(); renderLog(); toast('已加入本日');
+};
+
+/* ========== 目標 ========== */
+document.getElementById('editTargets').onclick=()=>{
+  document.getElementById('tKcal').value=state.targets.kcal;
+  document.getElementById('tPro').value=state.targets.protein; show('targetModal');
+};
+document.getElementById('tSave').onclick=()=>{
+  const k=parseFloat(document.getElementById('tKcal').value);
+  const p=parseFloat(document.getElementById('tPro').value);
+  if(isNaN(k)||isNaN(p)||k<=0||p<=0){toast('請輸入有效數值');return;}
+  state.targets={kcal:k,protein:p}; save(); hide('targetModal'); renderTotals(); toast('目標已更新');
+};
+
+/* ========== 日期切換 ========== */
+function shiftDay(d){
+  const nd=new Date(curDate);nd.setDate(nd.getDate()+d);
+  if(dkey(nd)>dkey(new Date()))return;
+  curDate=nd; renderAll();
+}
+document.getElementById('prevDay').onclick=()=>shiftDay(-1);
+document.getElementById('nextDay').onclick=()=>shiftDay(1);
+
+/* ========== 同步設定 UI ========== */
+document.getElementById('syncBtn').onclick=()=>{
+  document.getElementById('syncUrl').value=sync.url||'';
+  document.getElementById('syncCode').value=sync.code||'';
+  document.getElementById('syncExtra').style.display=sync.on?'block':'none';
+  show('syncModal');
+};
+document.getElementById('genCode').onclick=()=>{
+  let s='';
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const arr=new Uint32Array(24);
+  (window.crypto||{}).getRandomValues ? crypto.getRandomValues(arr) : arr.forEach((_,i)=>arr[i]=Math.random()*1e9);
+  for(let i=0;i<24;i++) s+=chars[arr[i]%chars.length];
+  document.getElementById('syncCode').value=s;
+  toast('已產生同步碼,記得複製到另一台');
+};
+document.getElementById('syncEnable').onclick=async()=>{
+  const url=document.getElementById('syncUrl').value.trim();
+  const code=document.getElementById('syncCode').value.trim();
+  if(!url||!code){toast('請填資料庫網址與同步碼');return;}
+  sync={url,code,on:true}; LS.set('dt_sync',sync); setSyncUI();
+  toast('連線中…');
+  const remote=await pullCloud(false);
+  if(remote && typeof remote==='object' && remote.foods){
+    state=ensureShape(remote); LS.set('dt_state',state); renderAll(); toast('已從雲端載入資料');
+  }else{
+    await pushCloud(); toast('已啟用,本機資料已上傳');
+  }
+  document.getElementById('syncExtra').style.display='block';
+  hide('syncModal');
+};
+document.getElementById('pullNow').onclick=async()=>{ await pullCloud(false); toast('已從雲端覆蓋本機'); };
+document.getElementById('pushNow').onclick=async()=>{ state.updatedAt=Date.now(); LS.set('dt_state',state); await pushCloud(); toast('已上傳覆蓋雲端'); };
+document.getElementById('syncOff').onclick=()=>{ sync={url:sync.url,code:sync.code,on:false}; LS.set('dt_sync',sync); setSyncUI(); document.getElementById('syncExtra').style.display='none'; hide('syncModal'); toast('已停用同步(資料仍留在本機)'); };
+
+/* ========== 管理模式 ========== */
+document.getElementById('mngFoods').onclick=function(){
+  managingFoods=!managingFoods; this.textContent=managingFoods?'完成':'管理'; this.classList.toggle('on',managingFoods); clearPending(); renderFoods();
+  if(managingFoods) toast('點食物可編輯,點右上✕可刪除');
+};
+document.getElementById('mngSets').onclick=function(){
+  managingSets=!managingSets; this.textContent=managingSets?'完成':'管理'; this.classList.toggle('on',managingSets); clearPending(); renderSets();
+};
+
+/* ========== Toast ========== */
+let toastTimer;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800);}
+
+init();
+</script>
+</body>
+</html>
