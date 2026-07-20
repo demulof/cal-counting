@@ -42,6 +42,11 @@
   .bar.pro{background:var(--pro-soft)}.bar.pro .fill{background:var(--pro)}
   .bar .fill.over{background:var(--over)}
   .tsettings{font-size:12px;color:var(--muted);text-align:right;margin-top:8px}
+  .tleft{font-size:12px;font-variant-numeric:tabular-nums;margin-top:5px}
+  .tleft .lnum{font-weight:700}
+  .tleft.under{color:var(--muted)}
+  .tleft.done{color:var(--pro)}
+  .tleft.over{color:var(--over)}
   .tsettings a{color:var(--pro);text-decoration:none;cursor:pointer}
 
   .sechead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
@@ -132,11 +137,13 @@
       <div class="thead"><span class="tname">熱量</span>
         <span class="tnum"><span id="kcalNow">0</span><span class="unit">kcal</span> <span class="target">/ <span id="kcalTarget"></span></span></span></div>
       <div class="bar kcal"><div class="fill" id="kcalBar" style="width:0%"></div></div>
+      <div class="tleft" id="kcalLeft"></div>
     </div>
     <div class="trow">
       <div class="thead"><span class="tname">蛋白質</span>
         <span class="tnum"><span id="proNow">0</span><span class="unit">g</span> <span class="target">/ <span id="proTarget"></span></span></span></div>
       <div class="bar pro"><div class="fill" id="proBar" style="width:0%"></div></div>
+      <div class="tleft" id="proLeft"></div>
     </div>
     <div class="tsettings"><a id="editTargets">調整目標</a></div>
   </div>
@@ -366,6 +373,13 @@ function renderTotals(){
   kb.style.width=Math.min(100,k/state.targets.kcal*100)+'%';
   pb.style.width=Math.min(100,p/state.targets.protein*100)+'%';
   kb.classList.toggle('over',k>state.targets.kcal);
+
+  const kl=document.getElementById('kcalLeft'), pl=document.getElementById('proLeft');
+  const kLeft=state.targets.kcal-k, pLeft=state.targets.protein-p;
+  if(kLeft>=0){ kl.className='tleft under'; kl.innerHTML=`還可攝取 <span class="lnum">${fmt(kLeft)}</span> kcal`; }
+  else{ kl.className='tleft over'; kl.innerHTML=`已超出 <span class="lnum">${fmt(-kLeft)}</span> kcal`; }
+  if(pLeft>0){ pl.className='tleft under'; pl.innerHTML=`還差 <span class="lnum">${fmt(pLeft)}</span> g 達標`; }
+  else{ pl.className='tleft done'; pl.innerHTML=`已達標(超出 <span class="lnum">${fmt(-pLeft)}</span> g)`; }
 }
 function renderLog(){
   const list=document.getElementById('logList'); list.innerHTML='';
