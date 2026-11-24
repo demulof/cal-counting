@@ -24,8 +24,43 @@
   .syncdot.err{background:var(--over)}
 
   .datebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .datebar button{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:18px;color:var(--ink);cursor:pointer}
-  .datebar .dlabel{text-align:center}
+  .datebar .navd{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:18px;color:var(--ink);cursor:pointer}
+  .datebar .dlabel{text-align:center;border:none;background:none;padding:4px 12px;font-family:inherit;color:var(--ink);border-radius:12px;cursor:pointer}
+  .datebar .dlabel:hover{background:var(--line)}
+  .datebar .dlabel .big .caret{font-size:11px;color:var(--muted);margin-left:4px;vertical-align:2px}
+
+  /* ===== 月曆 ===== */
+  .calsheet{padding-top:14px}
+  .calhead{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+  .calhead .navb,.calhead .closeb{width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:18px;color:var(--ink);cursor:pointer;font-family:inherit;flex:0 0 auto}
+  .calhead .navb:disabled{opacity:.3;cursor:default}
+  .calhead .ctitle{flex:1;text-align:center;font-weight:700;font-size:17px}
+  .calhead .ctitle .yr{display:block;font-size:12px;font-weight:500;color:var(--muted);line-height:1.2}
+  .calhead .closeb{margin-left:6px;font-size:16px}
+  .caltools{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;min-height:26px}
+  .caltools .legend{display:flex;gap:12px;font-size:11px;color:var(--muted)}
+  .caltools .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .caltools .gotoday{border:none;background:var(--pro-soft);color:var(--pro);font-size:12px;font-weight:600;border-radius:99px;padding:4px 12px;cursor:pointer;font-family:inherit}
+  .calweek,.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .calweek{margin-bottom:4px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .calweek span{text-align:center;font-size:12px;color:var(--muted)}
+  .calweek span.we{color:var(--over)}
+  .cday{border:1px solid transparent;background:none;border-radius:10px;padding:5px 2px 6px;min-height:64px;display:flex;flex-direction:column;align-items:stretch;gap:3px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .cday:hover:not(:disabled){background:var(--bg)}
+  .cday .dn{text-align:center;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.3}
+  .cday.out{visibility:hidden;pointer-events:none}
+  .cday:disabled{cursor:default}
+  .cday:disabled .dn{color:#C7CDC9}
+  .cday.today .dn{color:var(--pro)}
+  .cday.today .dn span{border-bottom:2px solid var(--pro)}
+  .cday.sel{border-color:var(--pro);background:var(--pro-soft)}
+  .cbar{position:relative;height:14px;border-radius:4px;overflow:hidden;font-size:10px;line-height:14px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .cbar .cf{position:absolute;left:0;top:0;bottom:0}
+  .cbar b{position:relative;font-weight:700}
+  .cbar.k{background:var(--kcal-soft)}.cbar.k .cf{background:#F0B46A}
+  .cbar.p{background:var(--pro-soft)}.cbar.p .cf{background:#8CC7A8}
+  .cbar.k.overk .cf{background:#E8907E}
+  @media (max-width:380px){ .cday{min-height:58px;padding:4px 1px} .cbar{font-size:9px;height:13px;line-height:13px} .calweek,.calgrid{gap:2px} }
   .datebar .dlabel .big{font-weight:700;font-size:17px}
   .datebar .dlabel .sub{font-size:12px;color:var(--muted)}
 
@@ -127,9 +162,9 @@
   </div>
 
   <div class="datebar">
-    <button id="prevDay" aria-label="前一天">‹</button>
-    <div class="dlabel"><div class="big" id="dateBig">今天</div><div class="sub" id="dateSub"></div></div>
-    <button id="nextDay" aria-label="後一天">›</button>
+    <button class="navd" id="prevDay" aria-label="前一天">‹</button>
+    <button class="dlabel" id="openCal" aria-label="開啟月曆"><div class="big"><span id="dateBig">今天</span><span class="caret">▼</span></div><div class="sub" id="dateSub"></div></button>
+    <button class="navd" id="nextDay" aria-label="後一天">›</button>
   </div>
 
   <div class="totals">
@@ -231,6 +266,22 @@
     <div class="btnrow"><button class="btn ghost" id="pullNow">下載雲端覆蓋本機</button><button class="btn ghost" id="pushNow">上傳本機覆蓋雲端</button></div>
     <div class="btnrow"><button class="btn danger" id="syncOff">停用同步</button></div>
   </div>
+</div></div>
+
+<!-- 月曆 -->
+<div class="overlay" id="calModal"><div class="sheet calsheet">
+  <div class="calhead">
+    <button class="navb" id="calPrev" aria-label="上個月">‹</button>
+    <div class="ctitle"><span class="yr" id="calYear"></span><span id="calMonth"></span></div>
+    <button class="navb" id="calNext" aria-label="下個月">›</button>
+    <button class="closeb" id="calClose" aria-label="關閉">✕</button>
+  </div>
+  <div class="caltools">
+    <div class="legend"><span><i style="background:#F0B46A"></i>熱量 kcal</span><span><i style="background:#8CC7A8"></i>蛋白質 g</span></div>
+    <button class="gotoday" id="calToday">回到今天</button>
+  </div>
+  <div class="calweek"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span></div>
+  <div class="calgrid" id="calGrid"></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -353,7 +404,7 @@ function init(){
 }
 
 /* ========== 渲染 ========== */
-function renderAll(){ renderDate();renderTotals();renderLog();renderSets();renderFoods(); }
+function renderAll(){ renderDate();renderTotals();renderLog();renderSets();renderFoods(); if(document.getElementById('calModal').classList.contains('show')) renderCal(); }
 
 function renderDate(){
   const today=dkey(new Date()), k=dkey(curDate);
@@ -643,6 +694,69 @@ function shiftDay(d){
 }
 document.getElementById('prevDay').onclick=()=>shiftDay(-1);
 document.getElementById('nextDay').onclick=()=>shiftDay(1);
+
+/* ========== 月曆 ========== */
+let calY, calM; // 目前顯示的年、月(0-11)
+function dayTotals(k){
+  let kc=0,p=0; (state.logs[k]||[]).forEach(e=>{kc+=e.kcal*e.qty;p+=e.protein*e.qty;});
+  return {kc,p,has:(state.logs[k]||[]).length>0};
+}
+function renderCal(){
+  const now=new Date(), todayK=dkey(now), selK=dkey(curDate);
+  document.getElementById('calYear').textContent=calY;
+  document.getElementById('calMonth').textContent=(calM+1)+'月';
+  const isCurMonth=(calY===now.getFullYear()&&calM===now.getMonth());
+  document.getElementById('calNext').disabled=isCurMonth;
+  document.getElementById('calToday').style.visibility=(isCurMonth&&selK===todayK)?'hidden':'visible';
+  const grid=document.getElementById('calGrid'); grid.innerHTML='';
+  const first=new Date(calY,calM,1);
+  const lead=(first.getDay()+6)%7; // 週一為第一天
+  const days=new Date(calY,calM+1,0).getDate();
+  const T=state.targets;
+  for(let i=0;i<lead;i++){const b=document.createElement('div');b.className='cday out';grid.appendChild(b);}
+  for(let d=1;d<=days;d++){
+    const dt=new Date(calY,calM,d), k=dkey(dt);
+    const b=document.createElement('button'); b.type='button';
+    b.className='cday'+(k===todayK?' today':'')+(k===selK?' sel':'');
+    let html=`<div class="dn"><span>${d}</span></div>`;
+    const t=dayTotals(k);
+    if(t.has){
+      const kw=Math.min(100,t.kc/T.kcal*100), pw=Math.min(100,t.p/T.protein*100);
+      html+=`<div class="cbar k${t.kc>T.kcal?' overk':''}"><div class="cf" style="width:${kw}%"></div><b>${Math.round(t.kc)}</b></div>
+             <div class="cbar p"><div class="cf" style="width:${pw}%"></div><b>${Math.round(t.p)}</b></div>`;
+    }
+    b.innerHTML=html;
+    if(k>todayK) b.disabled=true;
+    else b.onclick=()=>{ curDate=dt; hide('calModal'); renderAll(); };
+    grid.appendChild(b);
+  }
+}
+function shiftMonth(n){
+  const d=new Date(calY,calM+n,1), now=new Date();
+  if(d.getFullYear()*12+d.getMonth() > now.getFullYear()*12+now.getMonth()) return;
+  calY=d.getFullYear(); calM=d.getMonth(); renderCal();
+}
+document.getElementById('openCal').onclick=()=>{ calY=curDate.getFullYear(); calM=curDate.getMonth(); renderCal(); show('calModal'); };
+document.getElementById('calClose').onclick=()=>hide('calModal');
+document.getElementById('calPrev').onclick=()=>shiftMonth(-1);
+document.getElementById('calNext').onclick=()=>shiftMonth(1);
+document.getElementById('calToday').onclick=()=>{ curDate=new Date(); hide('calModal'); renderAll(); };
+// 手機左右滑動切換月份
+(function(){
+  const g=document.getElementById('calGrid'); let sx=0,sy=0;
+  g.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  g.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5) shiftMonth(dx<0?1:-1);
+  },{passive:true});
+})();
+// 電腦:Esc 關閉、方向鍵切月份
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('calModal').classList.contains('show')) return;
+  if(e.key==='Escape') hide('calModal');
+  else if(e.key==='ArrowLeft') shiftMonth(-1);
+  else if(e.key==='ArrowRight') shiftMonth(1);
+});
 
 /* ========== 同步設定 UI ========== */
 document.getElementById('syncBtn').onclick=()=>{
