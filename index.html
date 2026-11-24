@@ -224,7 +224,7 @@
 
 <!-- 新增組合 -->
 <div class="overlay" id="setModal"><div class="sheet">
-  <h3>新增組合餐點</h3>
+  <h3 id="setModalTitle">新增組合餐點</h3>
   <div class="field"><label>組合名稱</label><input id="sName" placeholder="例:固定早餐"></div>
   <div class="field"><label>勾選食物並設定數量</label></div>
   <div class="picklist" id="setPickList"></div>
@@ -466,10 +466,10 @@ function renderSets(){
     const {k,p}=setTotals(s);
     const b=document.createElement('button'); b.className='chip setchip';
     b.innerHTML=`<span>${esc(s.name)}</span><span class="meta">${fmt(k)} kcal・${fmt(p)}g</span>`;
-    b.onclick=()=>managingSets?null:addSet(s);
+    b.onclick=()=>managingSets?openSetModal(s):addSet(s);
     b.appendChild(makeDelBtn('set',s.id,s.name,b)); sc.appendChild(b);
   });
-  const add=document.createElement('button'); add.className='chip addnew'; add.textContent='＋ 新增組合'; add.onclick=openSetModal; sc.appendChild(add);
+  const add=document.createElement('button'); add.className='chip addnew'; add.textContent='＋ 新增組合'; add.onclick=()=>openSetModal(null); sc.appendChild(add);
 }
 function renderFoods(){
   const nonEmpty=state.cats.filter(c=>state.foods.some(f=>f.cat===c));
@@ -481,7 +481,7 @@ function renderFoods(){
     t.onclick=()=>{activeFilter=c;LS.set('dt_filter',c);renderFoods();}; tabs.appendChild(t);
   });
   const fc=document.getElementById('foodChips'); fc.classList.toggle('managing',managingFoods); fc.innerHTML='';
-  const shown=activeFilter==='全部'?state.foods:state.foods.filter(f=>f.cat===activeFilter);
+  const shown=sortFoods(activeFilter==='全部'?state.foods:state.foods.filter(f=>f.cat===activeFilter));
   shown.forEach(f=>{
     const b=document.createElement('button'); b.className='chip';
     b.innerHTML=`<span>${esc(f.name)}</span><span class="meta">${fmt(f.kcal)} kcal・${fmt(f.protein)}g</span>`;
@@ -490,6 +490,8 @@ function renderFoods(){
   });
   const add=document.createElement('button'); add.className='chip addnew'; add.textContent='＋ 新增食物'; add.onclick=()=>openFoodModal(null); fc.appendChild(add);
 }
+const zhSort=(()=>{ try{ return new Intl.Collator('zh-Hant-TW-u-co-stroke',{numeric:true}); }catch(e){ return new Intl.Collator('zh-Hant',{numeric:true}); } })();
+function sortFoods(list){ return list.slice().sort((a,b)=>zhSort.compare(a.name,b.name)); }
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
 /* ========== 操作 ========== */
@@ -617,26 +619,32 @@ document.getElementById('addCatBtn').onclick=()=>{
 document.getElementById('editCats').onclick=()=>{clearCatPending();renderCatList();show('catModal');};
 
 /* ========== 新增組合 ========== */
-let setPick={};
-function openSetModal(){
-  setPick={}; const list=document.getElementById('setPickList'); list.innerHTML='';
-  state.foods.forEach(f=>{
+let setPick={}, editingSetId=null;
+function openSetModal(set){
+  editingSetId=set?set.id:null;
+  setPick={}; if(set) set.items.forEach(it=>{ if(state.foods.some(f=>f.id===it.foodId)) setPick[it.foodId]=it.qty; });
+  document.getElementById('setModalTitle').textContent=set?'編輯組合餐點':'新增組合餐點';
+  const list=document.getElementById('setPickList'); list.innerHTML='';
+  sortFoods(state.foods).forEach(f=>{
     const row=document.createElement('div'); row.className='pickitem';
     row.innerHTML=`<div class="info"><div class="n">${esc(f.name)}</div><div class="m">${fmt(f.kcal)} kcal・${fmt(f.protein)}g</div></div>
-      <div class="qty"><button data-a="minus">−</button><span data-q>0</span><button data-a="plus">＋</button></div>`;
+      <div class="qty"><button data-a="minus">−</button><span data-q>${setPick[f.id]||0}</span><button data-a="plus">＋</button></div>`;
     const q=row.querySelector('[data-q]');
     row.querySelector('[data-a="plus"]').onclick=()=>{setPick[f.id]=(setPick[f.id]||0)+1;q.textContent=setPick[f.id];};
     row.querySelector('[data-a="minus"]').onclick=()=>{if(!setPick[f.id])return;setPick[f.id]--;if(!setPick[f.id])delete setPick[f.id];q.textContent=setPick[f.id]||0;};
     list.appendChild(row);
   });
-  document.getElementById('sName').value=''; show('setModal');
+  document.getElementById('sName').value=set?set.name:''; show('setModal');
 }
 document.getElementById('sSave').onclick=()=>{
   const name=document.getElementById('sName').value.trim();
   const items=Object.entries(setPick).map(([foodId,qty])=>({foodId,qty}));
   if(!name){toast('請輸入組合名稱');return;}
   if(items.length===0){toast('請至少選一項食物');return;}
-  state.sets.push({id:uid(),name,items}); save(); hide('setModal'); renderSets(); toast('組合已建立');
+  if(editingSetId){
+    const s=state.sets.find(x=>x.id===editingSetId); if(s){s.name=name;s.items=items;}
+  }else state.sets.push({id:uid(),name,items});
+  save(); hide('setModal'); renderSets(); toast(editingSetId?'組合已更新':'組合已建立');
 };
 
 /* ========== 手動輸入 ========== */
@@ -730,6 +738,7 @@ function renderCal(){
     else b.onclick=()=>{ curDate=dt; hide('calModal'); renderAll(); };
     grid.appendChild(b);
   }
+  for(let i=lead+days;i<42;i++){const b=document.createElement('div');b.className='cday out';grid.appendChild(b);} // 固定 6 週,高度一致
 }
 function shiftMonth(n){
   const d=new Date(calY,calM+n,1), now=new Date();
@@ -800,6 +809,7 @@ document.getElementById('mngFoods').onclick=function(){
 };
 document.getElementById('mngSets').onclick=function(){
   managingSets=!managingSets; this.textContent=managingSets?'完成':'管理'; this.classList.toggle('on',managingSets); clearPending(); renderSets();
+  if(managingSets) toast('點組合可編輯,點右上✕可刪除');
 };
 
 /* ========== Toast ========== */
